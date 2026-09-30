@@ -1,0 +1,5 @@
+apify-client
+pydantic>=2
+python-dotenv
+requests
+tenacity
