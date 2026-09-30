@@ -3,3 +3,8 @@ pydantic>=2
 python-dotenv
 requests
 tenacity
+pandas
+openpyxl
+pypdf
+tavily-python
+exa-py
