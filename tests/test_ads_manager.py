@@ -136,23 +136,23 @@ class TestInsightSchema:
         """Script should validate total runtime 30-60s."""
         from schemas.models import Hook, Scene
 
-        hook = Hook(visual="v", first_3s="f", text="t", sfx="s")
+        hook = Hook(visual="v", first_3s="f", text="t", sfx="s", duration_sec=3.0)
         scenes = [
             Scene(visual="v", camera="c", vo="vo", on_screen_text="t", duration_sec=10, music="m")
             for _ in range(5)
         ]
 
-        # 5 scenes * 10s = 50s (valid)
+        # 5 scenes * 10s = 50s + hook 3s + cta 3s = 56s (valid)
         script = Script(type="pain", hook=hook, scenes=scenes, cta="Buy now")
-        assert script.total_runtime == 50
+        assert script.total_runtime == 56
 
-        # 5 scenes * 8s = 40s (valid)
+        # 5 scenes * 8s = 40s + hook 3s + cta 3s = 46s (valid)
         scenes_short = [
             Scene(visual="v", camera="c", vo="vo", on_screen_text="t", duration_sec=8, music="m")
             for _ in range(5)
         ]
         script2 = Script(type="data", hook=hook, scenes=scenes_short, cta="Buy now")
-        assert script2.total_runtime == 40
+        assert script2.total_runtime == 46
 
     def test_script_validation_fails_short_runtime(self):
         """Script should fail if total runtime < 30s."""

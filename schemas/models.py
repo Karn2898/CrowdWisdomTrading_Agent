@@ -57,6 +57,7 @@ class Hook(BaseModel):
     first_3s: str
     text: str
     sfx: str
+    duration_sec: float = 3.0
 
 
 class Scene(BaseModel):
@@ -77,12 +78,13 @@ class Script(BaseModel):
     hook: Hook
     scenes: list[Scene] = Field(min_length=5, max_length=7)
     cta: str
+    cta_duration: float = 3.0
 
     @computed_field
     @property
     def total_runtime(self) -> float:
-        """Total runtime of the script in seconds."""
-        return sum(scene.duration_sec for scene in self.scenes)
+        """Total runtime of the script in seconds (hook + scenes + CTA)."""
+        return self.hook.duration_sec + sum(scene.duration_sec for scene in self.scenes) + self.cta_duration
 
     @model_validator(mode="after")
     def validate_script(self) -> Script:
@@ -95,7 +97,8 @@ class Script(BaseModel):
             raise ValueError(f"scene count must be 5-7, got {scene_count}")
 
         total_duration = self.total_runtime
-        if total_duration < 30 or total_duration > 60:
+        # Use small epsilon for floating point comparison
+        if total_duration < 30 - 1e-9 or total_duration > 60 + 1e-9:
             raise ValueError(f"total duration must be 30-60s, got {total_duration:.1f}s")
 
         return self
