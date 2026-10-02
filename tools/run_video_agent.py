@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
 """Run video agent: render scripts end-to-end with validation and review artifacts."""
 
-# Ensure ffmpeg is in PATH BEFORE any imports that might check for it
 import os
+import shutil
 from pathlib import Path
-FFMPEG_DIR = Path(r"C:\Users\DELL\tools\ffmpeg\ffmpeg-master-latest-win64-gpl\bin")
-FFMPEG_PATH = str(FFMPEG_DIR / "ffmpeg.exe")
-FFPROBE_PATH = str(FFMPEG_DIR / "ffprobe.exe")
-if FFMPEG_DIR.exists():
-    os.environ["PATH"] = str(FFMPEG_DIR) + os.pathsep + os.environ.get("PATH", "")
 
 import argparse
 import json
@@ -30,6 +25,27 @@ logger = logging.getLogger(__name__)
 SCRIPT_TYPES = ["pain", "data", "solution"]
 SCRIPTS_DIR = Path(__file__).parent.parent / "out" / "scripts"
 VIDEOS_DIR = Path(__file__).parent.parent / "out" / "videos"
+
+
+def resolve_binary(env_var: str, default_name: str) -> str:
+    """Resolve executable path from env var override or PATH."""
+    env_path = os.getenv(env_var)
+    if env_path:
+        binary_path = Path(env_path)
+        if binary_path.exists():
+            return str(binary_path)
+        raise FileNotFoundError(f"{env_var} is set but does not exist: {binary_path}")
+
+    resolved = shutil.which(default_name)
+    if resolved:
+        return resolved
+    raise FileNotFoundError(
+        f"{default_name} not found. Install ffmpeg tools and add to PATH, or set {env_var}."
+    )
+
+
+FFMPEG_PATH = resolve_binary("FFMPEG_PATH", "ffmpeg")
+FFPROBE_PATH = resolve_binary("FFPROBE_PATH", "ffprobe")
 
 
 def run_command(cmd: list[str], timeout: int = 300) -> subprocess.CompletedProcess:

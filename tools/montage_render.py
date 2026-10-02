@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Render script JSON to MP4 using OpenMontage composition engine with Piper TTS."""
 
-# Ensure ffmpeg is in PATH BEFORE importing OpenMontage tools
 import os
-FFMPEG_DIR = r"C:\Users\DELL\tools\ffmpeg\ffmpeg-master-latest-win64-gpl\bin"
-if os.path.exists(FFMPEG_DIR):
-    os.environ["PATH"] = FFMPEG_DIR + os.pathsep + os.environ.get("PATH", "")
+import shutil
+
 
 import argparse
 import json
@@ -15,6 +13,25 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
+
+def resolve_ffmpeg_executable() -> str:
+    """Resolve ffmpeg binary from env override or PATH."""
+    env_path = os.getenv("FFMPEG_PATH")
+    if env_path:
+        ffmpeg_path = Path(env_path)
+        if ffmpeg_path.exists():
+            return str(ffmpeg_path)
+        raise FileNotFoundError(f"FFMPEG_PATH is set but does not exist: {ffmpeg_path}")
+
+    ffmpeg_path = shutil.which("ffmpeg")
+    if ffmpeg_path:
+        return ffmpeg_path
+    raise FileNotFoundError(
+        "ffmpeg not found. Install ffmpeg and add it to PATH, or set FFMPEG_PATH to ffmpeg.exe."
+    )
+
+
+FFMPEG_BIN = resolve_ffmpeg_executable()
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "vendor" / "OpenMontage"))
 
@@ -388,7 +405,7 @@ def render_with_ffmpeg_direct(
     bg_color = "0x1a1a2e"  # Dark blue background
     
     cmd = [
-        "ffmpeg", "-y",
+        FFMPEG_BIN, "-y",
         "-f", "lavfi",
         "-i", f"color=c={bg_color}:size=1080x1920:duration={target_duration}:rate=30",
         "-i", str(audio_path),

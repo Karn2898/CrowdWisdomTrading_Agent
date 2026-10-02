@@ -8,3 +8,4 @@ openpyxl
 pypdf
 tavily-python
 exa-py
+piper-tts
