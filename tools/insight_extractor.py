@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Extract insights from top ads using OpenRouter LLM."""
 
 import argparse

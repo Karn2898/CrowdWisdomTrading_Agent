@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create kanban pipeline: T1 (ads_manager) → T2a/T2b/T2c (script_agent: pain/data/solution) → T3 (video_agent)."""
+"""Create the Ads -> Scripts -> Video Kanban pipeline."""
 
 import json
 import subprocess
@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def run_cmd(cmd: list[str], capture: bool = True) -> subprocess.CompletedProcess:
-    """Run command and return result."""
+    """Run a Hermes command."""
     print(f"$ {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=capture, text=True)
     if result.returncode != 0 and capture:
@@ -24,7 +24,7 @@ def kanban_init() -> bool:
 
 
 def task_exists(idempotency_key: str) -> str | None:
-    """Check if task with idempotency key exists by listing and filtering."""
+    """Return the task ID for an existing idempotency key."""
     result = run_cmd(["hermes", "kanban", "list", "--json", "--archived"])
     if result.returncode != 0:
         return None
@@ -46,7 +46,6 @@ def create_task(
     parent_ids: list[str] | None = None,
 ) -> str | None:
     """Create a kanban task idempotently."""
-    # Check if already exists
     existing = task_exists(idempotency_key)
     if existing:
         print(f"  Task already exists: {existing} ({title})")
@@ -86,9 +85,8 @@ def link_tasks(parent_id: str, child_id: str) -> bool:
     if result.returncode == 0:
         print(f"  Linked: {parent_id} -> {child_id}")
         return True
-    # Link might already exist
     if "already" in result.stderr.lower() or "duplicate" in result.stderr.lower():
-        print(f"  Link already exists: {parent_id} → {child_id}")
+        print(f"  Link already exists: {parent_id} -> {child_id}")
         return True
     print(f"  Link failed: {result.stderr.strip()}")
     return False
@@ -105,12 +103,10 @@ def print_board_state() -> None:
 
 def main() -> int:
     """Create the full pipeline."""
-    # Ensure kanban is initialized
     if not kanban_init():
         print("Failed to initialize kanban")
         return 1
 
-    # Pipeline configuration
     base_body = {
         "project_root": str(Path.cwd()),
         "scripts_dir": "out/scripts",
@@ -118,7 +114,6 @@ def main() -> int:
         "cache_dir": "out/.cache",
     }
 
-    # T1: Ads Manager
     t1_body = json.dumps({**base_body, "stage": "ads"}, indent=2)
     t1_id = create_task(
         title="T1: Ads Manager - Scrape Meta Ads & Extract Insights",
@@ -131,7 +126,6 @@ def main() -> int:
         print("Failed to create T1")
         return 1
 
-    # T2a: Script Agent - Pain
     t2a_body = json.dumps({**base_body, "stage": "script", "script_type": "pain"}, indent=2)
     t2a_id = create_task(
         title="T2a: Script Agent - Pain Script",
@@ -141,7 +135,6 @@ def main() -> int:
         parent_ids=[t1_id],
     )
 
-    # T2b: Script Agent - Data
     t2b_body = json.dumps({**base_body, "stage": "script", "script_type": "data"}, indent=2)
     t2b_id = create_task(
         title="T2b: Script Agent - Data Script",
@@ -151,7 +144,6 @@ def main() -> int:
         parent_ids=[t1_id],
     )
 
-    # T2c: Script Agent - Solution
     t2c_body = json.dumps({**base_body, "stage": "script", "script_type": "solution"}, indent=2)
     t2c_id = create_task(
         title="T2c: Script Agent - Solution Script",
@@ -161,7 +153,6 @@ def main() -> int:
         parent_ids=[t1_id],
     )
 
-    # T3: Video Agent (depends on all three scripts)
     t3_body = json.dumps({**base_body, "stage": "video"}, indent=2)
     t3_id = create_task(
         title="T3: Video Agent - Render All Videos",
@@ -171,7 +162,6 @@ def main() -> int:
         parent_ids=[t2a_id, t2b_id, t2c_id] if all([t2a_id, t2b_id, t2c_id]) else None,
     )
 
-    # Ensure links exist (in case --parent didn't work)
     if t1_id and t2a_id:
         link_tasks(t1_id, t2a_id)
     if t1_id and t2b_id:

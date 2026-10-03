@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Generate video scripts from insights, research, and CW stats using OpenRouter."""
 
 import argparse

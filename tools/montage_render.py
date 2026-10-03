@@ -1,21 +1,9 @@
-#!/usr/bin/env python3
-"""Render script JSON to MP4 using OpenMontage composition engine with Piper TTS.
-
-Upgraded render pipeline:
-  - Consistent color grade via ffmpeg (styles: teal_orange, dark_finance, none)
-  - Per-scene camera moves (slow zoom, push-in, whip-pan) in the direct renderer
-  - Tight pacing: scene cuts land exactly at VO end (no dead air), --pad-sec knob
-  - Sound design: whoosh on every cut, hit on the hook, sidechain-ducked music
-  - Big legible on-screen numbers from out/cw_stats.json
-  - --style flag plus --camera / --pad-sec / --no-sfx / --stats to stay configurable
-"""
-
-import os
-import shutil
-
+﻿#!/usr/bin/env python3
+"""Render a script into a narrated vertical ad."""
 import argparse
 import json
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -28,21 +16,17 @@ from typing import Any, List, Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "vendor" / "OpenMontage"))
 
-from tools.base_tool import BaseTool, ToolResult
 from tools.video.video_compose import VideoCompose
 
-# Add our schemas
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from schemas.models import Script
 
-# Import our TTS module - ensure we import from our tools, not OpenMontage
 import importlib.util
 tts_path = Path(__file__).parent / "tts_piper.py"
 spec = importlib.util.spec_from_file_location("tts_piper", tts_path)
 tts_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tts_module)
 generate_voiceover = tts_module.generate_voiceover
-adjust_scene_durations = tts_module.adjust_scene_durations
 adjust_scene_durations = tts_module.adjust_scene_durations
 
 logging.basicConfig(
@@ -76,7 +60,6 @@ def resolve_ffmpeg_executable() -> str:
 
 FFMPEG_BIN = resolve_ffmpeg_executable()
 
-# ---------------------------------------------------------------- styles
 
 # Color grade filter chains applied via ffmpeg. Keys are the --style choices.
 STYLES: dict[str, dict[str, Any]] = {
@@ -120,7 +103,6 @@ DEFAULT_STYLE = "dark_finance"
 # Camera moves cycled across scenes (also individually selectable via --camera)
 CAMERA_MOVES = ("slow_zoom", "push_in", "whip_pan")
 
-# ---------------------------------------------------------------- helpers
 
 
 def load_cw_stats(stats_path: Path, limit: int = 6) -> List[dict]:
@@ -193,7 +175,6 @@ def find_music_track() -> Path | None:
     return None
 
 
-# ---------------------------------------------------------------- sound design
 
 
 def ffmpeg_sfx_whoosh(duration: float = 0.5) -> List[str]:
@@ -299,7 +280,6 @@ def build_sound_design(
     return final_mix if final_mix.exists() else None
 
 
-# ---------------------------------------------------------------- stats overlays
 
 
 def stat_drawtext_filters(
@@ -380,7 +360,7 @@ def script_to_edit_decisions(script: Script, project_dir: Path, audio_path: Path
 
     cuts = []
 
-    # Hook scene — tight pacing: hard cut in/out, no dead air
+    # Hook scene â€” tight pacing: hard cut in/out, no dead air
     hook_duration = getattr(script.hook, 'duration_sec', 3.0) or 3.0
     cuts.append({
         "id": "hook",
@@ -398,7 +378,7 @@ def script_to_edit_decisions(script: Script, project_dir: Path, audio_path: Path
         "reason": "Scroll-stopping hook"
     })
 
-    # Script scenes — cycle camera moves (slow zoom / push-in / whip-pan)
+    # Script scenes â€” cycle camera moves (slow zoom / push-in / whip-pan)
     camera_cycle = list(CAMERA_MOVES)
     for i, scene in enumerate(script.scenes):
         duration = scene.duration_sec
