@@ -44,7 +44,6 @@ def create_task(
     assignee: str,
     idempotency_key: str,
     parent_ids: list[str] | None = None,
-    skill: str = "crowdwisdom",
 ) -> str | None:
     """Create a kanban task idempotently."""
     # Check if already exists
@@ -59,7 +58,6 @@ def create_task(
         "--body", body,
         "--assignee", assignee,
         "--idempotency-key", idempotency_key,
-        "--skill", skill,
         "--json"
     ]
 
@@ -86,7 +84,7 @@ def link_tasks(parent_id: str, child_id: str) -> bool:
     """Add dependency link if not already linked."""
     result = run_cmd(["hermes", "kanban", "link", parent_id, child_id])
     if result.returncode == 0:
-        print(f"  Linked: {parent_id} → {child_id}")
+        print(f"  Linked: {parent_id} -> {child_id}")
         return True
     # Link might already exist
     if "already" in result.stderr.lower() or "duplicate" in result.stderr.lower():
